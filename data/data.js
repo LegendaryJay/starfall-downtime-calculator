@@ -1,0 +1,58 @@
+import { ref } from "vue";
+export const activities = ref([
+  {
+    label: "Craft Common Magic Item",
+    value: 0,
+    dc: 10,
+    time: 5,
+    timeUnit: "Day",
+    daily: 10,
+  },
+  {
+    label: "Craft Uncommon Magic Item",
+    value: 1,
+    dc: 15,
+    time: 15,
+    timeUnit: "Day",
+    daily: 20,
+  },
+  {
+    label: "Craft Rare Magic Item",
+    value: 2,
+    dc: 20,
+    time: 30,
+    timeUnit: "Day",
+    daily: 250,
+  },
+  {
+    label: "Craft Very Rare Magic Item",
+    value: 3,
+    dc: 25,
+    time: 50,
+    timeUnit: "Day",
+    daily: 700,
+  },
+  {
+    label: "Learn Language or Tool",
+    value: 4,
+    time: 10,
+    timeUnit: "Week",
+    daily: 50,
+  },
+  {
+    label: "Learn Skill Proficiency",
+    value: 5,
+    dc: 16,
+    time: 15,
+    timeUnit: "Week",
+    daily: 250,
+  },
+  {
+    label: "Learn Skill Expertise",
+    value: 6,
+    dc: 22,
+    time: 20,
+    timeUnit: "Week",
+    daily: 1500,
+  },
+]);

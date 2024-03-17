@@ -1,376 +1,399 @@
 <template>
-  <q-card class="q-ma-md">
-    <q-card-section>
-      <q-btn-toggle
-        v-model="calcMode"
-        push
-        glossy
-        toggle-color="primary"
-        :options="[
-          { label: 'Craft Magic Item', value: 'craftMagicItem' },
-          { label: 'Learn Language/Tool', value: 'learnLanguageTool' },
-          { label: 'Learn Skill', value: 'learnSkill' },
-        ]"
-      />
-    </q-card-section>
-    <q-card-section>
-      <q-select
-        v-model="itemRarity"
-        label="Magic Item Rarity"
-        :options="rarityOptions"
-        outlined
-        v-if="calcMode === 'craftMagicItem'"
-      />
-      <q-btn-toggle
-        v-model="isExpertise"
-        class="q-mt-md"
-        push
-        toggle-color="primary"
-        color="white"
-        text-color="primary"
-        :options="[
-          { label: 'proficiency', value: false },
-          { label: 'Expertise', value: true },
-        ]"
-        v-if="calcMode === 'learnSkill'"
-      />
-      <q-btn-toggle
-        v-model="isConsumable"
-        class="q-mt-md"
-        push
-        toggle-color="primary"
-        color="white"
-        text-color="primary"
-        :options="[
-          { label: 'Item', value: false },
-          { label: 'Consumable', value: true },
-        ]"
-        v-if="calcMode === 'craftMagicItem'"
-      />
-      <q-input
-        v-model.number="intMod"
-        label="Intelligence Modifier"
-        type="number"
-        class="q-mt-md"
-      />
-      <q-input
-        v-model.number="skillMod"
-        label="Skill Check Bonus"
-        type="number"
-        class="q-mt-md"
-        v-if="calcMode !== 'learnLanguageTool'"
-      />
-      <q-input
-        v-model.number="toolMod"
-        label="Tool Check Bonus (Skill Modifier + Proficiency)"
-        type="number"
-        class="q-mt-md"
-        v-if="calcMode === 'craftMagicItem'"
-      />
-    </q-card-section>
-    <q-card-section class="row">
-      <div class="col-auto q-pr-md">
-        <q-input
-          dense
-          filled
-          v-model.number="trialCount"
-          label="Trials"
-          type="number"
-          class="q-mt-md q-pa-auto"
-        />
-      </div>
-      <q-btn class="col" @click="calculate">Calculate</q-btn>
-    </q-card-section>
-  </q-card>
-  <TrialResultsCard :trialResults="averages" />
+  <div class="q-pa-md">
+    <div class="q-gutter-md">
+      <q-card>
+        <q-card-section class="bg-primary text-white">
+          <div class="text-h6">Calculator</div>
+        </q-card-section>
+        <q-card-section>
+          <q-btn-toggle
+            v-model="calcMode"
+            push
+            toggle-color="primary"
+            :options="[
+              { label: 'Craft Magic Item', value: 'craftMagicItem' },
+              { label: 'Learn Language/Tool', value: 'learnLanguageTool' },
+              { label: 'Learn Skill', value: 'learnSkill' },
+            ]"
+          />
+        </q-card-section>
+        <q-card-section class="row">
+          <div class="col-12 col-sm-6">
+            <q-select
+              v-model="itemRarity"
+              :options="rarityOptions"
+              outlined
+              v-if="calcMode === 'craftMagicItem'"
+            />
+            <q-btn-toggle
+              v-model="isExpertise"
+              class="q-mt-md"
+              push
+              toggle-color="primary"
+              color="white"
+              text-color="primary"
+              :options="[
+                { label: 'proficiency', value: false },
+                { label: 'Expertise', value: true },
+              ]"
+              v-if="calcMode === 'learnSkill'"
+            />
+            <q-btn-toggle
+              v-model="isConsumable"
+              class="q-mt-md"
+              push
+              toggle-color="primary"
+              color="white"
+              text-color="primary"
+              :options="[
+                { label: 'Item', value: false },
+                { label: 'Consumable', value: true },
+              ]"
+              v-if="calcMode === 'craftMagicItem'"
+            />
+            <q-input
+              v-model.number="intMod"
+              label="Intelligence Modifier"
+              type="number"
+              class="q-mt-md"
+            />
+            <q-input
+              v-model.number="skillMod"
+              label="Skill Check Bonus"
+              type="number"
+              class="q-mt-md"
+              v-if="calcMode !== 'learnLanguageTool'"
+            />
+            <q-input
+              v-model.number="toolMod"
+              label="Tool Check Bonus (Skill Modifier + Proficiency)"
+              type="number"
+              class="q-mt-md"
+              v-if="calcMode === 'craftMagicItem'"
+            />
+          </div>
+          <div class="col-12 col-sm-6 q-pa-md">
+            <EditActivitiesItem
+              v-model:model-value="currentActivity"
+            ></EditActivitiesItem>
+          </div>
+        </q-card-section>
+        <q-card-section class="row">
+          <div class="col-12 col-sm-2">
+            <q-input
+              dense
+              filled
+              v-model.number="trialCount"
+              label="Trials"
+              type="number"
+            />
+          </div>
+          <div class="col-12 col-sm-10">
+            <q-btn class="bg-primary fit text-white" @click="calculate">
+              Calculate
+            </q-btn>
+          </div>
+        </q-card-section>
+      </q-card>
+      <TrialResultsCard :trialResults="averages" />
+    </div>
+  </div>
 </template>
 
-<script>
-import { ref } from "vue";
+<script setup>
+import { ref, computed } from "vue";
 import TrialResultsCard from "./TrialResultsCard.vue";
-export default {
-  components: {
-    TrialResultsCard,
-  },
-  // name: 'ComponentName',
+import EditActivitiesItem from "./EditActivitiesItem.vue";
+import { activities } from "app/data/data";
 
-  setup() {
-    const trialCount = ref(1000);
-    const averages = ref({});
+const trialCount = ref(1000);
 
-    const rarityOptions = [
-      {
-        label: "Common",
-        value: 0,
-        dc: 10,
-        days: 5,
-        gold: 50,
-        daily: 10,
-      },
-      {
-        label: "Uncommon",
-        value: 1,
-        dc: 15,
-        days: 15,
-        gold: 300,
-        daily: 20,
-      },
-      {
-        label: "Rare",
-        value: 2,
-        dc: 20,
-        days: 30,
-        gold: 7500,
-        daily: 250,
-      },
-      {
-        label: "Very Rare",
-        value: 3,
-        dc: 25,
-        days: 50,
-        gold: 35000,
-        daily: 700,
-      },
-    ];
+const averages = ref({});
 
-    const itemRarity = ref(rarityOptions[0]); // Default value can be adjusted
-    const isExpertise = ref(false);
-    const isConsumable = ref(false);
-    const intMod = ref(0);
-    const skillMod = ref(0);
-    const toolMod = ref(0);
-    const calcMode = ref("craftMagicItem");
+const rarityOptions = activities.value.slice(0, 4);
 
-    const output = {};
-    function roll() {
-      return Math.floor(Math.random() * 20) + 1;
+const itemRarity = ref(rarityOptions[0]); // Default value can be adjusted
+const isExpertise = ref(false);
+const isConsumable = ref(false);
+const intMod = ref(0);
+const skillMod = ref(0);
+const toolMod = ref(0);
+const calcMode = ref("craftMagicItem");
+
+const currentActivity = computed(() => {
+  if (calcMode.value == "craftMagicItem") {
+    return itemRarity.value;
+  }
+
+  if (calcMode.value == "learnLanguageTool") {
+    return activities.value[4];
+  }
+
+  if (calcMode.value == "learnSkill") {
+    if (isExpertise.value) {
+      return activities.value[6];
     }
+    return activities.value[5];
+  }
+  return undefined;
+});
 
-    let magicTrial = function () {
-      let trials = trialCount.value;
+function roll() {
+  return Math.floor(Math.random() * 20) + 1;
+}
 
-      let requiredSuccesses = itemRarity.value.days - intMod.value;
-      requiredSuccesses = requiredSuccesses <= 0 ? 1 : requiredSuccesses;
+const gold = computed(
+  () => currentActivity.value.daily * currentActivity.value.time
+);
 
-      let baseCost = itemRarity.value.gold;
-      let cost = isConsumable.value ? baseCost / 2 : baseCost;
+let magicTrial = function () {
+  let trials = trialCount.value;
+  let requiredSuccesses = Math.max(
+    currentActivity.value.time - intMod.value,
+    1
+  );
+  let cost = isConsumable.value ? gold.value / 2 : gold.value;
+  let dc = currentActivity.value.dc;
 
-      let dc = itemRarity.value.dc;
+  let totalTime = 0;
+  let totalCost = 0;
+  let totalSkillRolls = 0;
+  let totalToolRolls = 0;
+  let successCount = 0;
+  let trialFalures = 0;
 
-      let totalTime = 0;
-      let totalCost = 0;
-      let totalSkillRolls = 0;
-      let totalToolRolls = 0;
-      let successCount = 0;
+  let minTime = Infinity;
+  let maxTime = 0;
+  let minCost = Infinity;
+  let maxCost = 0;
 
-      let minTime = Infinity;
-      let maxTime = 0;
-      let minCost = Infinity;
-      let maxCost = 0;
+  for (let trial = 0; trial < trials; trial++) {
+    let successes = 0;
+    let trialTime = 0;
 
-      for (let trial = 0; trial < trials; trial++) {
-        let successes = 0;
-        let trialTime = 0;
-        let trialCost = cost;
+    let trialCost = cost;
 
-        while (successes < requiredSuccesses) {
-          if (trialTime > 999) break;
-
-          let toolRoll = roll();
-          let skillRoll = roll();
-
-          let nat1 = toolRoll == 1 || skillRoll == 1;
-          let nat20 = toolRoll == 20 || skillRoll == 20;
-
-          if (nat1) {
-            successes--;
-            trialCost += itemRarity.value.daily;
-          }
-
-          if (nat20) {
-            successes++;
-          }
-
-          if (
-            toolRoll + toolMod.value >= dc &&
-            skillRoll + skillMod.value >= dc
-          ) {
-            successes++;
-          }
-
-          totalSkillRolls += skillRoll;
-          totalToolRolls += toolRoll;
-
-          trialTime++;
-        }
-
-        successCount += successes;
-        totalTime += trialTime;
-        totalCost += trialCost;
-        minTime = Math.min(minTime, trialTime);
-        maxTime = Math.max(maxTime, trialTime);
-        minCost = Math.min(minCost, trialCost);
-        maxCost = Math.max(maxCost, trialCost);
+    while (successes < requiredSuccesses) {
+      if (trialTime > 999) {
+        trialFalures++;
+        break;
       }
 
-      let averageTime = totalTime / trials;
-      let averageCost = totalCost / trials;
-      let averageSkillRoll = totalSkillRolls / totalTime;
-      let averageToolRoll = totalToolRolls / totalTime;
-      let successChance = successCount / totalTime;
+      let toolRoll = roll();
+      let skillRoll = roll();
 
-      return {
-        time: {
-          unit: "Days",
-          originalRequired: requiredSuccesses,
-          average: averageTime,
-          min: minTime,
-          max: maxTime,
-        },
-        cost: {
-          originalRequired: baseCost,
-          average: averageCost,
-          min: minCost,
-          max: maxCost,
-        },
-        rolls: {
-          dcRequired: dc,
-          tool: averageToolRoll,
-          toolBonus: toolMod.value,
-          skill: averageSkillRoll,
-          skillBonus: skillMod.value,
-          successChance: successChance,
-        },
-      };
-    };
+      let nat1 = toolRoll == 1 || skillRoll == 1;
+      let nat20 = toolRoll == 20 || skillRoll == 20;
 
-    function langToolTrial() {
-      let weeks = 15 - intMod.value;
-      return {
-        time: {
-          unit: "Weeks",
-          originalRequired: weeks,
-        },
-        cost: {
-          originalRequired: 50 * weeks,
-        },
-      };
-    }
-
-    function skillTrial() {
-      let trials = trialCount.value;
-      let weeklyCost = isExpertise.value ? 1500 : 250;
-      let requiredWeeks = (isExpertise.value ? 20 : 15) - intMod.value;
-      let dc = isExpertise.value ? 22 : 16;
-
-      let totalWeeks = 0;
-      let totalCost = 0;
-      let totalSkillRolls = 0;
-      let totalSkillModRolls = 0;
-      let totalSuccesses = 0;
-
-      let minWeeks = Infinity;
-      let maxWeeks = 0;
-      let minCost = Infinity;
-      let maxCost = 0;
-
-      let totalDays = 0;
-
-      for (let trial = 0; trial < trials; trial++) {
-        let weeks = 0;
-        let weeksuccess = 0;
-        let skillRollsThisTrial = 0;
-        let skillModRollThisTrial = 0;
-        let successesThisTrial = 0;
-
-        while (weeksuccess < requiredWeeks) {
-          let weekDaysSuccess = 0;
-          let day;
-
-          for (day = 0; day < 5; day++) {
-            totalDays++;
-            let skillRoll = roll();
-            skillRollsThisTrial += skillRoll;
-
-            if (skillRoll + skillMod.value >= dc) {
-              weekDaysSuccess++;
-            }
-            if (weekDaysSuccess >= 3) {
-              successesThisTrial++;
-              break; // Success for the week
-            }
-          }
-          if (weekDaysSuccess >= 3) {
-            weeksuccess++;
-          }
-          weeks++;
-        }
-
-        let trialCost = weeklyCost * weeks;
-        totalWeeks += weeks;
-        totalCost += trialCost;
-        totalSkillRolls += skillRollsThisTrial;
-        totalSkillModRolls += skillModRollThisTrial;
-
-        minWeeks = Math.min(minWeeks, weeks);
-        maxWeeks = Math.max(maxWeeks, weeks);
-        minCost = Math.min(minCost, trialCost);
-        maxCost = Math.max(maxCost, trialCost);
+      if (nat1) {
+        successes--;
+        trialCost += currentActivity.value.daily;
       }
 
-      let averageWeeks = totalWeeks / trials;
-      let averageCost = totalCost / trials;
-      let averageSkillRoll = totalSkillRolls / totalDays;
-      let successChance = (requiredWeeks * trials) / totalWeeks;
-      console.log("success: ", successChance);
-
-      return {
-        time: {
-          unit: "Weeks",
-          originalRequired: requiredWeeks,
-          average: averageWeeks,
-          min: minWeeks,
-          max: maxWeeks,
-        },
-        cost: {
-          originalRequired: weeklyCost * requiredWeeks,
-          average: averageCost,
-          min: minCost,
-          max: maxCost,
-        },
-        rolls: {
-          dcRequired: dc,
-          skill: averageSkillRoll,
-          skillBonus: skillMod.value,
-          successChance: successChance,
-        },
-      };
-    }
-
-    function calculate() {
-      if (calcMode.value === "craftMagicItem") {
-        averages.value = magicTrial();
-      } else if (calcMode.value === "learnLanguageTool") {
-        averages.value = langToolTrial();
-      } else if (calcMode.value === "learnSkill") {
-        averages.value = skillTrial();
+      if (nat20) {
+        successes++;
       }
-      console.log(averages.value);
+
+      if (toolRoll + toolMod.value >= dc && skillRoll + skillMod.value >= dc) {
+        successes++;
+        successCount++;
+      }
+
+      totalSkillRolls += skillRoll;
+      totalToolRolls += toolRoll;
+
+      totalTime++;
+      trialTime++;
     }
-    return {
-      itemRarity,
-      isExpertise,
-      intMod,
-      skillMod,
-      toolMod,
-      rarityOptions,
-      calcMode,
-      isConsumable,
-      roll,
-      calculate,
-      trialCount,
-      averages,
-    };
-  },
+
+    minTime = Math.min(minTime, trialTime);
+    minCost = Math.min(minCost, trialCost);
+
+    if (trialFalures > 0) continue;
+
+    maxTime = Math.max(maxTime, trialTime);
+    maxCost = Math.max(maxCost, trialCost);
+
+    totalCost += trialCost;
+  }
+  let successChance = successCount / totalTime;
+  let averageSkillRoll = totalSkillRolls / totalTime;
+  let averageToolRoll = totalToolRolls / totalTime;
+
+  let averageTime;
+  let averageCost;
+
+  if (trialFalures > 0) {
+    averageTime = Infinity;
+    averageCost = Infinity;
+    maxCost = Infinity;
+    maxTime = Infinity;
+  } else {
+    averageTime = maxTime == Infinity ? Infinity : totalTime / trials;
+    averageCost = totalCost / trials;
+  }
+  return {
+    time: {
+      unit: currentActivity.value.timeUnit,
+      originalRequired: requiredSuccesses,
+      average: averageTime,
+      min: minTime,
+      max: maxTime,
+    },
+    cost: {
+      originalRequired: cost,
+      average: averageCost,
+      min: minCost,
+      max: maxCost,
+    },
+    rolls: {
+      dcRequired: dc,
+      tool: averageToolRoll,
+      toolBonus: toolMod.value,
+      skill: averageSkillRoll,
+      skillBonus: skillMod.value,
+      successChance: successChance,
+    },
+  };
 };
+
+function langToolTrial() {
+  console.log(currentActivity.value.time);
+  let weeks = currentActivity.value.time - intMod.value;
+  return {
+    time: {
+      unit: currentActivity.value.timeUnit,
+      originalRequired: weeks,
+    },
+    cost: {
+      originalRequired: currentActivity.value.daily * weeks,
+    },
+  };
+}
+
+function skillDay(bonus, dc) {
+  let rawRoll = roll();
+  let success = rawRoll + bonus >= dc;
+  return {
+    roll: rawRoll,
+    success,
+  };
+}
+
+function skillWeek(bonus, dc) {
+  let rollTotal = 0;
+  let successTotal = 0;
+  let day;
+  for (day = 0; day < 5; day++) {
+    let { roll, success } = skillDay(bonus, dc);
+    rollTotal += roll;
+    successTotal += success;
+    if (successTotal >= 3) break;
+  }
+  return {
+    weeksuccess: successTotal >= 3,
+    rollTotal,
+    daySucesses: successTotal,
+    dayCount: day,
+  };
+}
+
+function skillTrial(time, bonus, dc) {
+  let weekSuccesses = 0;
+  let rollTotal = 0;
+  let daySucesses = 0;
+  let dayCount = 0;
+  let weekCount = 0;
+
+  while (weekSuccesses < time && weekCount < 999) {
+    let weekData = skillWeek(bonus, dc);
+
+    weekSuccesses += weekData.weeksuccess ? 1 : 0;
+    rollTotal += weekData.rollTotal;
+    daySucesses += weekData.daySucesses;
+    dayCount += weekData.dayCount;
+    weekCount++;
+  }
+  return {
+    weekSuccesses,
+    rollTotal,
+    daySucesses,
+    dayCount,
+    weekCount,
+    trialSuccess: weekCount < 999,
+  };
+}
+
+function skillExperiment() {
+  let requiredTime = currentActivity.value.time - intMod.value;
+  let dc = currentActivity.value.dc;
+  let bonus = skillMod.value;
+
+  let totalDays = 0;
+  let totalWeeks = 0;
+  let totalDaySuccesses = 0;
+  let totalWeekSuccesses = 0;
+  let totalSkillRolls = 0;
+
+  let minWeeks = Infinity;
+  let maxWeeks = 0;
+  let minCost = Infinity;
+  let maxCost = 0;
+
+  let fails = 0;
+
+  for (let trial = 0; trial < trialCount.value; trial++) {
+    let trialData = skillTrial(requiredTime, bonus, dc);
+    fails += trialData.trialSuccess ? 0 : 1;
+
+    totalWeekSuccesses += trialData.weekSuccesses;
+    totalSkillRolls += trialData.rollTotal;
+    totalDaySuccesses += trialData.daySucesses;
+    totalDays += trialData.dayCount;
+    totalWeeks += trialData.weekCount;
+
+    let trialCost = trialData.weekCount * currentActivity.value.daily;
+
+    minWeeks = Math.min(minWeeks, trialData.weekCount);
+    maxWeeks = Math.max(maxWeeks, trialData.weekCount);
+    minCost = Math.min(minCost, trialCost);
+    maxCost = Math.max(maxCost, trialCost);
+  }
+
+  if (fails == 0) {
+  }
+  return {
+    time: {
+      unit: currentActivity.value.timeUnit,
+      originalRequired: requiredTime,
+      average: totalWeeks / trialCount.value,
+      min: minWeeks,
+      max: maxWeeks,
+      trialSuccessRate: 1 - fails / trialCount.value,
+    },
+    cost: {
+      originalRequired: currentActivity.value.daily * requiredTime,
+      average: (totalWeeks / trialCount.value) * currentActivity.value.daily,
+      min: minCost,
+      max: maxCost,
+    },
+    rolls: {
+      dcRequired: dc,
+      skill: totalSkillRolls / totalDays,
+      skillBonus: skillMod.value,
+      successChance: totalDaySuccesses / totalDays,
+    },
+  };
+}
+
+function calculate() {
+  if (calcMode.value === "craftMagicItem") {
+    averages.value = magicTrial();
+  } else if (calcMode.value === "learnLanguageTool") {
+    averages.value = langToolTrial();
+  } else if (calcMode.value === "learnSkill") {
+    averages.value = skillExperiment();
+  }
+  console.log(averages.value);
+}
 </script>
