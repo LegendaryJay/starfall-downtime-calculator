@@ -239,6 +239,7 @@ let magicTrial = function () {
       average: averageTime,
       min: minTime,
       max: maxTime,
+      trialSuccessRate: 1 - trialFalures / trialCount.value,
     },
     cost: {
       originalRequired: cost,

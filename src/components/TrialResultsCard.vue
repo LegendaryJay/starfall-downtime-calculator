@@ -16,20 +16,29 @@
                 <div v-if="trialResults.time.originalRequired">
                   <strong>Base:</strong>
                   {{ trialResults.time.originalRequired }}
-                  {{ trialResults.time.unit }}
+                  {{ trialResults.time.unit }}s
                 </div>
                 <div v-if="trialResults.time.average">
                   <strong>Avg:</strong>
                   {{ formatNumber(trialResults.time.average) }}
-                  {{ trialResults.time.unit }}
+                  {{ trialResults.time.unit }}s
                 </div>
                 <div v-if="trialResults.time.min">
                   <strong>Min:</strong> {{ trialResults.time.min }}
-                  {{ trialResults.time.unit }}
+                  {{ trialResults.time.unit }}s
                 </div>
                 <div v-if="trialResults.time.max">
                   <strong>Max:</strong> {{ trialResults.time.max }}
-                  {{ trialResults.time.unit }}
+                  {{ trialResults.time.unit }}s
+                </div>
+                <div
+                  v-if="
+                    typeof trialResults.time.trialSuccessRate !== 'undefined' &&
+                    trialResults.time.trialSuccessRate < 1
+                  "
+                >
+                  <strong>Successful Trials:</strong>
+                  {{ formattedTrialSuccessChance }}
                 </div>
               </div>
             </q-card-section>
@@ -162,6 +171,18 @@ export default {
         // Convert to percentage and format
         return (
           this.formatNumber(this.trialResults.rolls.successChance * 100) + "%"
+        );
+      }
+      return undefined;
+    },
+    formattedTrialSuccessChance() {
+      if (
+        this.trialResults.rolls &&
+        typeof this.trialResults.time.trialSuccessRate !== "undefined"
+      ) {
+        // Convert to percentage and format
+        return (
+          this.formatNumber(this.trialResults.time.trialSuccessRate * 100) + "%"
         );
       }
       return undefined;
