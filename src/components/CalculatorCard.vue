@@ -167,6 +167,8 @@ let magicTrial = function () {
   let minCost = Infinity;
   let maxCost = 0;
 
+  let timeData = [];
+
   for (let trial = 0; trial < trials; trial++) {
     let successes = 0;
     let trialTime = 0;
@@ -205,7 +207,7 @@ let magicTrial = function () {
       totalTime++;
       trialTime++;
     }
-
+    timeData.push(trialTime);
     minTime = Math.min(minTime, trialTime);
     minCost = Math.min(minCost, trialCost);
 
@@ -216,22 +218,14 @@ let magicTrial = function () {
 
     totalCost += trialCost;
   }
+
   let successChance = successCount / totalTime;
   let averageSkillRoll = totalSkillRolls / totalTime;
   let averageToolRoll = totalToolRolls / totalTime;
 
-  let averageTime;
-  let averageCost;
+  let averageTime = totalTime / trials;
+  let averageCost = totalCost / trials;
 
-  if (trialFalures > 0) {
-    averageTime = Infinity;
-    averageCost = Infinity;
-    maxCost = Infinity;
-    maxTime = Infinity;
-  } else {
-    averageTime = maxTime == Infinity ? Infinity : totalTime / trials;
-    averageCost = totalCost / trials;
-  }
   return {
     time: {
       unit: currentActivity.value.timeUnit,
@@ -240,6 +234,7 @@ let magicTrial = function () {
       min: minTime,
       max: maxTime,
       trialSuccessRate: 1 - trialFalures / trialCount.value,
+      timeData,
     },
     cost: {
       originalRequired: cost,
@@ -395,6 +390,5 @@ function calculate() {
   } else if (calcMode.value === "learnSkill") {
     averages.value = skillExperiment();
   }
-  console.log(averages.value);
 }
 </script>

@@ -114,84 +114,220 @@
           </q-card>
         </div>
       </div>
+
+      <div v-if="hasData" class="q-pa-md">
+        <VueApexCharts
+          type="area"
+          height="350"
+          :options="chartOptions"
+          :series="series"
+        ></VueApexCharts>
+      </div>
     </q-card-section>
   </q-card>
 </template>
 
-<script>
-export default {
-  name: "TrialResultsCard",
-  props: {
-    trialResults: {
-      type: Object,
-      default: () => ({}),
-    },
-  },
-  methods: {
-    formatNumber(value) {
-      // This will convert to a fixed number of decimal places, then parse to float to remove trailing zeros
-      return parseFloat(value.toFixed(2));
-    },
-  },
-  computed: {
-    hasTime() {
-      return (
-        this.trialResults.time &&
-        (typeof this.trialResults.time.average !== "undefined" ||
-          typeof this.trialResults.time.min !== "undefined" ||
-          typeof this.trialResults.time.max !== "undefined" ||
-          typeof this.trialResults.time.originalRequired !== "undefined")
-      );
-    },
-    hasCost() {
-      return (
-        this.trialResults.cost &&
-        (typeof this.trialResults.cost.average !== "undefined" ||
-          typeof this.trialResults.cost.min !== "undefined" ||
-          typeof this.trialResults.cost.max !== "undefined" ||
-          typeof this.trialResults.cost.originalRequired !== "undefined")
-      );
-    },
-    hasOtherStats() {
-      return (
-        this.trialResults.rolls &&
-        (typeof this.trialResults.rolls.dcRequired !== "undefined" ||
-          typeof this.trialResults.rolls.successChance !== "undefined" ||
-          typeof this.trialResults.rolls.skill !== "undefined" ||
-          typeof this.trialResults.rolls.tool !== "undefined" ||
-          typeof this.trialResults.rolls.skillBonus !== "undefined" ||
-          typeof this.trialResults.rolls.toolBonus !== "undefined")
-      );
-    },
-    formattedSuccessChance() {
-      if (
-        this.trialResults.rolls &&
-        typeof this.trialResults.rolls.successChance !== "undefined"
-      ) {
-        // Convert to percentage and format
-        return (
-          this.formatNumber(this.trialResults.rolls.successChance * 100) + "%"
-        );
-      }
-      return undefined;
-    },
-    formattedTrialSuccessChance() {
-      if (
-        this.trialResults.rolls &&
-        typeof this.trialResults.time.trialSuccessRate !== "undefined"
-      ) {
-        // Convert to percentage and format
-        return (
-          this.formatNumber(this.trialResults.time.trialSuccessRate * 100) + "%"
-        );
-      }
-      return undefined;
-    },
-    hasResults() {
-      return this.hasTime || this.hasCost || this.hasOtherStats;
-    },
-  },
-};
-</script>
+<script setup>
+import { ref, watch, computed, toRefs } from "vue";
+import VueApexCharts from "vue3-apexcharts";
 
-<style scoped></style>
+const props = defineProps({
+  trialResults: {
+    type: Object,
+    default: () => ({}),
+  },
+});
+
+const { trialResults } = toRefs(props);
+
+function formatNumber(value) {
+  return parseFloat(value.toFixed(2));
+}
+
+const hasTime = computed(
+  () =>
+    !!trialResults.value.time &&
+    ["average", "min", "max", "originalRequired"].some(
+      (key) => key in trialResults.value.time
+    )
+);
+const hasCost = computed(
+  () =>
+    !!trialResults.value.cost &&
+    ["average", "min", "max", "originalRequired"].some(
+      (key) => key in trialResults.value.cost
+    )
+);
+const hasOtherStats = computed(
+  () =>
+    !!trialResults.value.rolls &&
+    [
+      "dcRequired",
+      "successChance",
+      "skill",
+      "tool",
+      "skillBonus",
+      "toolBonus",
+    ].some((key) => key in trialResults.value.rolls)
+);
+const hasData = computed(
+  () =>
+    !!trialResults.value.time &&
+    typeof trialResults.value.time.timeData !== "undefined"
+);
+const hasResults = computed(
+  () => hasTime.value || hasCost.value || hasOtherStats.value
+);
+
+const formattedSuccessChance = computed(() =>
+  trialResults.value.rolls &&
+  typeof trialResults.value.rolls.successChance !== "undefined"
+    ? `${formatNumber(trialResults.value.rolls.successChance * 100)}%`
+    : undefined
+);
+const formattedTrialSuccessChance = computed(() =>
+  trialResults.value.time &&
+  typeof trialResults.value.time.trialSuccessRate !== "undefined"
+    ? `${formatNumber(trialResults.value.time.trialSuccessRate * 100)}%`
+    : undefined
+);
+
+const series = ref([
+  {
+    name: "Frequency",
+    data: [[0, 0]],
+  },
+]);
+const chartOptions = ref({
+  chart: {
+    height: 350,
+    type: "area",
+  },
+  stroke: {
+    curve: "smooth",
+  },
+  dataLabels: {
+    enabled: false,
+  },
+  xaxis: {
+    tickAmount: 10,
+    title: {
+      text: "Days",
+      style: {
+        color: "#000",
+      },
+    },
+  },
+  yaxis: {
+    title: {
+      text: "Frequency",
+      style: {
+        color: "#000",
+      },
+    },
+  },
+  y: {
+    formatter: function (value, { series, seriesIndex, dataPointIndex, w }) {
+      // Assuming `value` is the frequency and `w.globals.labels[dataPointIndex]` gives you the days
+      const days = w.globals.labels[dataPointIndex];
+      // Format the message with days and frequency
+      return `It took ${days} days ${value}% of the time`;
+    },
+  },
+  legend: {
+    horizontalAlign: "left",
+  },
+  tooltip: {
+    x: {
+      show: true,
+      formatter: (val) => `${val} days`,
+    },
+    y: {
+      formatter: (val) => {
+        const totalTrials = trialResults.value.time.timeData.length;
+        const percentage = ((val / totalTrials) * 100).toFixed(2); // Keeping two decimal places for precision
+        return `${val} out of ${totalTrials} times (${percentage}%)`;
+      },
+      title: {
+        formatter: () => "", // This removes the series name by returning an empty string
+      },
+    },
+    marker: {
+      show: false, // This disables the color marker
+    },
+  },
+});
+
+watch(
+  () => trialResults.value.time?.timeData,
+  (newTimeData, oldTimeData) => {
+    if (newTimeData) {
+      const counts = newTimeData.reduce((acc, value) => {
+        acc[value] = (acc[value] || 0) + 1;
+        return acc;
+      }, {});
+
+      const data = Object.entries(counts).map(([number, count]) => [
+        Number(number),
+        count,
+      ]);
+
+      const totalValues = trialResults.value.time.timeData.length;
+      const halfwayPoint = Math.floor((totalValues - 1) / 2);
+      let accumulated = 0;
+      let median;
+
+      for (let [day, frequency] of data) {
+        accumulated += frequency;
+        if (accumulated > halfwayPoint) {
+          median = day;
+          break;
+        } else if (accumulated === halfwayPoint && totalValues % 2 === 0) {
+          // For even total values, average this day with the next day
+          median =
+            (day + data.find(([nextDay]) => Number(nextDay) > day)[0]) / 2;
+          break;
+        }
+      }
+
+      chartOptions.value = {
+        ...chartOptions.value,
+        annotations: {
+          xaxis: [
+            // {
+            //   x: median,
+            //   borderColor: "#00E396",
+            //   label: {
+            //     borderColor: "#00E396",
+            //     style: {
+            //       color: "#fff",
+            //       background: "#00E396",
+            //     },
+            //     text: `Median: ${median}`,
+            //   },
+            // },
+            {
+              x: trialResults.value.time.average,
+              borderColor: "#00E396",
+              label: {
+                borderColor: "#00E396",
+                style: {
+                  color: "#fff",
+                  background: "#00E396",
+                },
+                text: `Average: ${trialResults.value.time.average}`,
+              },
+            },
+          ],
+        },
+      };
+      series.value[0].data = data;
+      console.log(data);
+    }
+  },
+  {
+    deep: true,
+    immediate: true,
+  }
+);
+</script>
