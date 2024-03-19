@@ -204,7 +204,7 @@ const chartOptions = ref({
     type: "area",
   },
   stroke: {
-    curve: "smooth",
+    //curve: "smooth",
   },
   dataLabels: {
     enabled: false,

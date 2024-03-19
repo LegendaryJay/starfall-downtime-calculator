@@ -312,56 +312,48 @@ function langToolTrial() {
   };
 }
 
-function skillDay(bonus, dc) {
-  let rawRoll = roll();
-  let success = rawRoll + bonus >= dc;
-  return {
-    roll: rawRoll,
-    success,
-  };
-}
-
 function skillWeek(bonus, dc) {
   let rollTotal = 0;
   let successTotal = 0;
   let day;
   for (day = 0; day < 5; day++) {
-    let { roll, success } = skillDay(bonus, dc);
-    rollTotal += roll;
+    let rawRoll = roll();
+    let success = rawRoll + bonus >= dc;
+
+    rollTotal += rawRoll;
     successTotal += success;
     if (successTotal >= 3) break;
   }
   return {
-    weeksuccess: successTotal >= 3,
+    timeSuccess: successTotal >= 3,
     rollTotal,
-    daySucesses: successTotal,
-    dayCount: day,
+    rollSucesses: successTotal,
+    rollCount: day,
   };
 }
 
 function skillTrial(time, bonus, dc) {
-  let weekSuccesses = 0;
-  let rollTotal = 0;
-  let daySucesses = 0;
-  let dayCount = 0;
-  let weekCount = 0;
+  let timeSuccesses = 0;
+  let skillRollTotal = 0;
+  let rollSuccesses = 0;
+  let rollCount = 0;
+  let timeCount = 0;
 
-  while (weekSuccesses < time && weekCount < 999) {
+  while (timeSuccesses < time && timeCount < 999) {
     let weekData = skillWeek(bonus, dc);
 
-    weekSuccesses += weekData.weeksuccess ? 1 : 0;
-    rollTotal += weekData.rollTotal;
-    daySucesses += weekData.daySucesses;
-    dayCount += weekData.dayCount;
-    weekCount++;
+    timeSuccesses += weekData.timeSuccess ? 1 : 0;
+    skillRollTotal += weekData.rollTotal;
+    rollSuccesses += weekData.rollSucesses;
+    rollCount += weekData.rollCount;
+    timeCount++;
   }
   return {
-    weekSuccesses,
-    rollTotal,
-    daySucesses,
-    dayCount,
-    weekCount,
-    trialSuccess: weekCount < 999,
+    skillRollTotal,
+    rollSuccesses,
+    rollCount,
+    timeCount,
+    trialSuccess: timeCount < 999,
   };
 }
 
@@ -372,8 +364,7 @@ function skillExperiment() {
 
   let totalDays = 0;
   let totalWeeks = 0;
-  let totalDaySuccesses = 0;
-  let totalWeekSuccesses = 0;
+  let totalRollSuccesses = 0;
   let totalSkillRolls = 0;
 
   let minWeeks = Infinity;
@@ -389,19 +380,18 @@ function skillExperiment() {
     let trialData = skillTrial(requiredTime, bonus, dc);
     fails += trialData.trialSuccess ? 0 : 1;
 
-    totalWeekSuccesses += trialData.weekSuccesses;
-    totalSkillRolls += trialData.rollTotal;
-    totalDaySuccesses += trialData.daySucesses;
-    totalDays += trialData.dayCount;
-    totalWeeks += trialData.weekCount;
+    totalSkillRolls += trialData.skillRollTotal;
+    totalRollSuccesses += trialData.rollSuccesses;
+    totalDays += trialData.rollCount;
+    totalWeeks += trialData.timeCount;
 
-    let trialCost = trialData.weekCount * currentActivity.value.daily;
+    let trialCost = trialData.timeCount * currentActivity.value.daily;
 
-    minWeeks = Math.min(minWeeks, trialData.weekCount);
-    maxWeeks = Math.max(maxWeeks, trialData.weekCount);
+    minWeeks = Math.min(minWeeks, trialData.timeCount);
+    maxWeeks = Math.max(maxWeeks, trialData.timeCount);
     minCost = Math.min(minCost, trialCost);
     maxCost = Math.max(maxCost, trialCost);
-    timeData.push(trialData.weekCount);
+    timeData.push(trialData.timeCount);
   }
 
   return {
@@ -424,7 +414,7 @@ function skillExperiment() {
       dcRequired: dc,
       skill: totalSkillRolls / totalDays,
       skillBonus: skillMod.value,
-      successChance: totalDaySuccesses / totalDays,
+      successChance: totalRollSuccesses / totalDays,
     },
   };
 }
