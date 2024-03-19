@@ -106,7 +106,7 @@ import TrialResultsCard from "./TrialResultsCard.vue";
 import EditActivitiesItem from "./EditActivitiesItem.vue";
 import { activities } from "app/data/data";
 
-const trialCount = ref(1000);
+const trialCount = ref(100000);
 
 const averages = ref({});
 
@@ -153,6 +153,7 @@ let magicTrial = function () {
     1
   );
   let cost = isConsumable.value ? gold.value / 2 : gold.value;
+  let dailyCost = cost / requiredSuccesses;
   let dc = currentActivity.value.dc;
 
   let totalTime = 0;
@@ -189,7 +190,7 @@ let magicTrial = function () {
 
       if (nat1) {
         successes--;
-        trialCost += currentActivity.value.daily;
+        trialCost += dailyCost;
       }
 
       if (nat20) {
@@ -338,6 +339,8 @@ function skillExperiment() {
 
   let fails = 0;
 
+  let timeData = [];
+
   for (let trial = 0; trial < trialCount.value; trial++) {
     let trialData = skillTrial(requiredTime, bonus, dc);
     fails += trialData.trialSuccess ? 0 : 1;
@@ -354,10 +357,9 @@ function skillExperiment() {
     maxWeeks = Math.max(maxWeeks, trialData.weekCount);
     minCost = Math.min(minCost, trialCost);
     maxCost = Math.max(maxCost, trialCost);
+    timeData.push(trialData.weekCount);
   }
 
-  if (fails == 0) {
-  }
   return {
     time: {
       unit: currentActivity.value.timeUnit,
@@ -366,6 +368,7 @@ function skillExperiment() {
       min: minWeeks,
       max: maxWeeks,
       trialSuccessRate: 1 - fails / trialCount.value,
+      timeData,
     },
     cost: {
       originalRequired: currentActivity.value.daily * requiredTime,
