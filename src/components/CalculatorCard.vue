@@ -146,7 +146,68 @@ const gold = computed(
   () => currentActivity.value.daily * currentActivity.value.time
 );
 
-let magicTrial = function () {
+let magicDay = function (skillBonus, toolBonus, dc) {
+  let successes = 0;
+  let rollSuccesses = 0;
+
+  let toolRoll = roll();
+  let skillRoll = roll();
+
+  let nat1 = toolRoll == 1 || skillRoll == 1;
+  let nat20 = toolRoll == 20 || skillRoll == 20;
+
+  if (nat1) {
+    successes--;
+  }
+
+  if (nat20) {
+    successes++;
+  }
+
+  if (toolRoll + toolBonus >= dc && skillRoll + skillBonus >= dc) {
+    successes++;
+    rollSuccesses++;
+  }
+
+  return {
+    rollSuccesses,
+    successes,
+    toolRoll,
+    skillRoll,
+    costOffset: nat1 ? 1 : 0,
+  };
+};
+
+// let magicTrial = function (skillBonus, toolBonus, dc, dailyCost) {
+//   let rollCount = 0;
+//   let skillRolls = 0;
+//   let toolRolls = 0;
+//   let rollSuccesses = 0;
+//   let successes = 0;
+
+//   let trailSuccess = false;
+
+//   let trialTime = 0;
+
+//   let costOffset = 0;
+
+//   while (effectiveSuccesses < requiredSuccesses &&trialTime > 999 ) {
+//     let dayData = magicDay(skillBonus, toolBonus, dc);
+//     effectiveSuccesses += dayData.effectiveSuccesses;
+//     costOffset += (dayData.nat1 ? 1 : 0) * dailyCost;
+
+//     totalSkillRolls += dayData.skillRoll;
+//     totalToolRolls += dayData.toolRoll;
+
+//     trialTime++;
+//   }
+//   if (effectiveSuccesses >= requiredSuccesses) {
+//     trailSuccess = true;
+//   }
+//   return {};
+// };
+
+let magicTrials = function () {
   let trials = trialCount.value;
   let requiredSuccesses = Math.max(
     currentActivity.value.time - intMod.value,
@@ -160,8 +221,9 @@ let magicTrial = function () {
   let totalCost = 0;
   let totalSkillRolls = 0;
   let totalToolRolls = 0;
-  let successCount = 0;
+
   let trialFalures = 0;
+  let rollSuccesses = 0;
 
   let minTime = Infinity;
   let maxTime = 0;
@@ -182,28 +244,13 @@ let magicTrial = function () {
         break;
       }
 
-      let toolRoll = roll();
-      let skillRoll = roll();
+      let dayData = magicDay(skillMod.value, toolMod.value, dc);
+      successes += dayData.successes;
+      trialCost += dayData.costOffset * dailyCost;
 
-      let nat1 = toolRoll == 1 || skillRoll == 1;
-      let nat20 = toolRoll == 20 || skillRoll == 20;
-
-      if (nat1) {
-        successes--;
-        trialCost += dailyCost;
-      }
-
-      if (nat20) {
-        successes++;
-      }
-
-      if (toolRoll + toolMod.value >= dc && skillRoll + skillMod.value >= dc) {
-        successes++;
-        successCount++;
-      }
-
-      totalSkillRolls += skillRoll;
-      totalToolRolls += toolRoll;
+      totalSkillRolls += dayData.skillRoll;
+      totalToolRolls += dayData.toolRoll;
+      rollSuccesses += dayData.rollSuccesses;
 
       totalTime++;
       trialTime++;
@@ -211,16 +258,13 @@ let magicTrial = function () {
     timeData.push(trialTime);
     minTime = Math.min(minTime, trialTime);
     minCost = Math.min(minCost, trialCost);
-
-    if (trialFalures > 0) continue;
-
     maxTime = Math.max(maxTime, trialTime);
     maxCost = Math.max(maxCost, trialCost);
 
     totalCost += trialCost;
   }
 
-  let successChance = successCount / totalTime;
+  let rollSuccessChance = rollSuccesses / totalTime;
   let averageSkillRoll = totalSkillRolls / totalTime;
   let averageToolRoll = totalToolRolls / totalTime;
 
@@ -249,7 +293,7 @@ let magicTrial = function () {
       toolBonus: toolMod.value,
       skill: averageSkillRoll,
       skillBonus: skillMod.value,
-      successChance: successChance,
+      successChance: rollSuccessChance,
     },
   };
 };
@@ -387,7 +431,7 @@ function skillExperiment() {
 
 function calculate() {
   if (calcMode.value === "craftMagicItem") {
-    averages.value = magicTrial();
+    averages.value = magicTrials();
   } else if (calcMode.value === "learnLanguageTool") {
     averages.value = langToolTrial();
   } else if (calcMode.value === "learnSkill") {
