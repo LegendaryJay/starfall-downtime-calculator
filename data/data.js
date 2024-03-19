@@ -6,7 +6,8 @@ export const activities = ref([
     dc: 10,
     time: 5,
     timeUnit: "Day",
-    daily: 10,
+    costPerTime: 10,
+    cost: 50,
   },
   {
     label: "Craft Uncommon Magic Item",
@@ -14,7 +15,8 @@ export const activities = ref([
     dc: 15,
     time: 15,
     timeUnit: "Day",
-    daily: 20,
+    costPerTime: 20,
+    cost: 300,
   },
   {
     label: "Craft Rare Magic Item",
@@ -22,7 +24,8 @@ export const activities = ref([
     dc: 20,
     time: 30,
     timeUnit: "Day",
-    daily: 250,
+    costPerTime: 250,
+    cost: 7500,
   },
   {
     label: "Craft Very Rare Magic Item",
@@ -30,14 +33,16 @@ export const activities = ref([
     dc: 25,
     time: 50,
     timeUnit: "Day",
-    daily: 700,
+    costPerTime: 700,
+    cost: 35000,
   },
   {
     label: "Learn Language or Tool",
     value: 4,
     time: 10,
     timeUnit: "Week",
-    daily: 50,
+    costPerTime: 50,
+    cost: 500,
   },
   {
     label: "Learn Skill Proficiency",
@@ -45,7 +50,8 @@ export const activities = ref([
     dc: 16,
     time: 15,
     timeUnit: "Week",
-    daily: 250,
+    costPerTime: 250,
+    cost: 3750,
   },
   {
     label: "Learn Skill Expertise",
@@ -53,6 +59,7 @@ export const activities = ref([
     dc: 22,
     time: 20,
     timeUnit: "Week",
-    daily: 1500,
+    costPerTime: 1500,
+    cost: 30000,
   },
 ]);

@@ -115,13 +115,23 @@
         </div>
       </div>
 
-      <div v-if="hasData" class="q-pa-md">
-        <VueApexCharts
-          type="area"
-          height="350"
-          :options="chartOptions"
-          :series="series"
-        ></VueApexCharts>
+      <div v-if="hasData" class="q-pa-md column">
+        <div class="col">
+          <VueApexCharts
+            type="area"
+            height="350"
+            :options="timeChartOptions"
+            :series="timeSeries"
+          ></VueApexCharts>
+        </div>
+        <div class="col">
+          <VueApexCharts
+            type="area"
+            height="350"
+            :options="costChartOptions"
+            :series="costSeries"
+          ></VueApexCharts>
+        </div>
       </div>
     </q-card-section>
   </q-card>
@@ -192,13 +202,13 @@ const formattedTrialSuccessChance = computed(() =>
     : undefined
 );
 
-const series = ref([
+const timeSeries = ref([
   {
     name: "Frequency",
     data: [[0, 0]],
   },
 ]);
-const chartOptions = ref({
+const timeChartOptions = ref({
   chart: {
     height: 350,
     type: "area",
@@ -257,12 +267,112 @@ const chartOptions = ref({
     },
   },
 });
+const costSeries = ref([
+  {
+    name: "Frequency",
+    data: [[0, 0]],
+  },
+]);
+const costChartOptions = ref({
+  chart: {
+    height: 350,
+    type: "area",
+    // Adding a background color that complements gold
+    background: "#f7f2e0", // A light cream background for contrast
+  },
+  stroke: {
+    curve: "smooth",
+    // Setting the stroke color to a golden shade
+    colors: ["#d4af37"], // A rich gold color
+  },
+  dataLabels: {
+    enabled: false,
+  },
+  xaxis: {
+    tickAmount: 10,
+    title: {
+      text: "Gold",
+      style: {
+        color: "#b8860b", // Darker gold for text to ensure readability
+      },
+    },
+  },
+  yaxis: {
+    title: {
+      text: "Frequency",
+      style: {
+        color: "#b8860b", // Darker gold for text to ensure readability
+      },
+    },
+  },
+  y: {
+    formatter: function (value, { series, seriesIndex, dataPointIndex, w }) {
+      const days = w.globals.labels[dataPointIndex];
+      return `It took ${days} gold ${value}% of the time`;
+    },
+  },
+  legend: {
+    horizontalAlign: "left",
+    labels: {
+      colors: "#d4af37", // Gold color for legend text
+    },
+  },
+  tooltip: {
+    x: {
+      show: true,
+      formatter: (val) => `${val} gold`,
+    },
+    y: {
+      formatter: (val) => {
+        const totalTrials = trialResults.value.time.timeData.length;
+        const percentage = ((val / totalTrials) * 100).toFixed(2);
+        return `${val} out of ${totalTrials} times (${percentage}%)`;
+      },
+      title: {
+        formatter: () => "",
+      },
+    },
+    marker: {
+      show: false,
+    },
+    // Adjusting the tooltip background and text colors for the gold theme
+    style: {
+      backgroundColor: "#fffbe6", // Light gold background for tooltip
+      colors: ["#b8860b"], // Dark gold for tooltip text
+    },
+  },
+  fill: {
+    // Gradient fill for the area chart to give it a more dynamic gold appearance
+    type: "gradient",
+    gradient: {
+      shadeIntensity: 1,
+      inverseColors: false,
+      opacityFrom: 0.5,
+      opacityTo: 0.3,
+      stops: [0, 90, 100],
+      colorStops: [
+        {
+          offset: 0,
+          color: "#d4af37",
+          opacity: 0.5,
+        },
+        {
+          offset: 100,
+          color: "#f7f2e0",
+          opacity: 0.3,
+        },
+      ],
+    },
+  },
+});
 
 watch(
-  () => trialResults.value.time?.timeData,
-  (newTimeData, oldTimeData) => {
-    if (newTimeData) {
-      const counts = newTimeData.reduce((acc, value) => {
+  () => trialResults.value,
+  (newData, oldTimeData) => {
+    let timeData = newData?.time?.timeData;
+    let costData = newData?.cost?.costData;
+    if (timeData) {
+      const counts = timeData.reduce((acc, value) => {
         acc[value] = (acc[value] || 0) + 1;
         return acc;
       }, {});
@@ -290,8 +400,8 @@ watch(
         }
       }
 
-      chartOptions.value = {
-        ...chartOptions.value,
+      timeChartOptions.value = {
+        ...timeChartOptions.value,
         annotations: {
           xaxis: [
             // {
@@ -321,10 +431,72 @@ watch(
           ],
         },
       };
-      series.value[0].data = data;
-      console.log(data);
+      timeSeries.value[0].data = data;
+    }
+    if (costData) {
+      const counts = costData.reduce((acc, value) => {
+        acc[value] = (acc[value] || 0) + 1;
+        return acc;
+      }, {});
+
+      const data = Object.entries(counts).map(([number, count]) => [
+        Number(number),
+        count,
+      ]);
+
+      const totalValues = trialResults.value.time.timeData.length;
+      const halfwayPoint = Math.floor((totalValues - 1) / 2);
+      let accumulated = 0;
+      let median;
+
+      for (let [day, frequency] of data) {
+        accumulated += frequency;
+        if (accumulated > halfwayPoint) {
+          median = day;
+          break;
+        } else if (accumulated === halfwayPoint && totalValues % 2 === 0) {
+          // For even total values, average this day with the next day
+          median =
+            (day + data.find(([nextDay]) => Number(nextDay) > day)[0]) / 2;
+          break;
+        }
+      }
+
+      costChartOptions.value = {
+        ...costChartOptions.value,
+        annotations: {
+          xaxis: [
+            // {
+            //   x: median,
+            //   borderColor: "#00E396",
+            //   label: {
+            //     borderColor: "#00E396",
+            //     style: {
+            //       color: "#fff",
+            //       background: "#00E396",
+            //     },
+            //     text: `Median: ${median}`,
+            //   },
+            // },
+            {
+              x: trialResults.value.cost.average,
+              borderColor: "#00E396",
+              label: {
+                borderColor: "#00E396",
+                style: {
+                  color: "#fff",
+                  background: "#00E396",
+                },
+                text: `Average: ${trialResults.value.cost.average}`,
+              },
+            },
+          ],
+        },
+      };
+      costSeries.value[0].data = data;
     }
   },
+
   {
     deep: true,
     immediate: true,

@@ -59,7 +59,7 @@
             Gold per
             {{ item.timeUnit }}
           </q-item-label>
-          {{ item.daily }}
+          {{ item.costPerTime }}
           <q-popup-edit
             v-model="item.daily"
             :title="'Modify Gold Per ' + item.timeUnit"
@@ -71,10 +71,19 @@
           </q-popup-edit>
         </q-item-section>
       </q-item>
-      <q-item>
+      <q-item clickable v-ripple>
         <q-item-section>
-          <q-item-label overline>Total Base Gold</q-item-label>
-          {{ gold }}
+          <q-item-label overline> Total Base Gold </q-item-label>
+          {{ item.cost }}
+          <q-popup-edit
+            v-model="item.cost"
+            :title="'Modify Base Price'"
+            buttons
+            :cover="false"
+            v-slot="scope"
+          >
+            <q-input type="number" v-model="scope.value" dense autofocus />
+          </q-popup-edit>
         </q-item-section>
       </q-item>
     </q-list>
@@ -93,8 +102,6 @@ const item = computed({
   get: () => props.modelValue,
   set: (value) => emit("update:modelValue", value),
 });
-
-const gold = computed(() => item.value.daily * item.value.time);
 
 watch(
   () => props.modelValue,
