@@ -1,10 +1,5 @@
 <template>
-  <q-card>
-    <q-card-section class="bg-secondary text-white">
-      <div class="">{{ item.label }}</div>
-    </q-card-section>
-    <q-separator />
-
+  <info-card :label="item.label">
     <q-list dense bordered separator>
       <q-item :disable="typeof item.dc == 'undefined'" clickable v-ripple>
         <q-item-section>
@@ -87,11 +82,12 @@
         </q-item-section>
       </q-item>
     </q-list>
-  </q-card>
+  </info-card>
 </template>
 
 <script setup>
 import { ref, watch, computed } from "vue";
+import InfoCard from "./InfoCard.vue";
 
 const props = defineProps({
   modelValue: Object,

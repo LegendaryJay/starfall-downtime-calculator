@@ -12,13 +12,13 @@
     </q-header>
 
     <q-page-container>
-      <CalculatorCard> </CalculatorCard>
+      <DowntimeCalculatorPage> </DowntimeCalculatorPage>
     </q-page-container>
   </q-layout>
 </template>
 
 <script setup>
-import CalculatorCard from "./components/CalculatorCard.vue";
+import DowntimeCalculatorPage from "./components/DowntimeCalculatorPage.vue";
 
 defineOptions({
   name: "App",

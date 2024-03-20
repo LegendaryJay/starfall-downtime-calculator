@@ -1,103 +1,97 @@
 <template>
-  <div class="q-pa-md">
-    <div class="q-gutter-md">
-      <q-card>
-        <q-card-section class="bg-primary text-white">
-          <div class="text-h6">Calculator</div>
-        </q-card-section>
-        <q-card-section>
+  <CardSection label="Calculator">
+    <div>
+      <q-card-section>
+        <q-btn-toggle
+          v-model="calcMode"
+          push
+          toggle-color="primary"
+          :options="[
+            { label: 'Craft Magic Item', value: 'craftMagicItem' },
+            { label: 'Learn Language/Tool', value: 'learnLanguageTool' },
+            { label: 'Learn Skill', value: 'learnSkill' },
+          ]"
+        />
+      </q-card-section>
+      <q-card-section class="row">
+        <div class="col-12 col-sm-6">
+          <q-select
+            v-model="itemRarity"
+            :options="rarityOptions"
+            outlined
+            v-if="calcMode === 'craftMagicItem'"
+          />
           <q-btn-toggle
-            v-model="calcMode"
+            v-model="isExpertise"
+            class="q-mt-md"
             push
             toggle-color="primary"
+            color="white"
+            text-color="primary"
             :options="[
-              { label: 'Craft Magic Item', value: 'craftMagicItem' },
-              { label: 'Learn Language/Tool', value: 'learnLanguageTool' },
-              { label: 'Learn Skill', value: 'learnSkill' },
+              { label: 'proficiency', value: false },
+              { label: 'Expertise', value: true },
             ]"
+            v-if="calcMode === 'learnSkill'"
           />
-        </q-card-section>
-        <q-card-section class="row">
-          <div class="col-12 col-sm-6">
-            <q-select
-              v-model="itemRarity"
-              :options="rarityOptions"
-              outlined
-              v-if="calcMode === 'craftMagicItem'"
-            />
-            <q-btn-toggle
-              v-model="isExpertise"
-              class="q-mt-md"
-              push
-              toggle-color="primary"
-              color="white"
-              text-color="primary"
-              :options="[
-                { label: 'proficiency', value: false },
-                { label: 'Expertise', value: true },
-              ]"
-              v-if="calcMode === 'learnSkill'"
-            />
-            <q-btn-toggle
-              v-model="isConsumable"
-              class="q-mt-md"
-              push
-              toggle-color="primary"
-              color="white"
-              text-color="primary"
-              :options="[
-                { label: 'Item', value: false },
-                { label: 'Consumable', value: true },
-              ]"
-              v-if="calcMode === 'craftMagicItem'"
-            />
-            <q-input
-              v-model.number="intMod"
-              label="Intelligence Modifier"
-              type="number"
-              class="q-mt-md"
-            />
-            <q-input
-              v-model.number="skillMod"
-              label="Skill Check Bonus"
-              type="number"
-              class="q-mt-md"
-              v-if="calcMode !== 'learnLanguageTool'"
-            />
-            <q-input
-              v-model.number="toolMod"
-              label="Tool Check Bonus (Skill Modifier + Proficiency)"
-              type="number"
-              class="q-mt-md"
-              v-if="calcMode === 'craftMagicItem'"
-            />
-          </div>
-          <div class="col-12 col-sm-6 q-pa-md">
-            <EditActivitiesItem
-              v-model:model-value="currentActivity"
-            ></EditActivitiesItem>
-          </div>
-        </q-card-section>
-        <q-card-section class="row">
-          <div class="col-12 col-sm-2">
-            <q-input
-              dense
-              filled
-              v-model.number="trialCountLimit"
-              label="Trials"
-              type="number"
-            />
-          </div>
-          <div class="col-12 col-sm-10">
-            <q-btn class="bg-primary fit text-white" @click="calculate">
-              Calculate
-            </q-btn>
-          </div>
-        </q-card-section>
-      </q-card>
-      <TrialResultsCard :trialResults="averages" />
+          <q-btn-toggle
+            v-model="isConsumable"
+            class="q-mt-md"
+            push
+            toggle-color="primary"
+            color="white"
+            text-color="primary"
+            :options="[
+              { label: 'Item', value: false },
+              { label: 'Consumable', value: true },
+            ]"
+            v-if="calcMode === 'craftMagicItem'"
+          />
+          <q-input
+            v-model.number="intMod"
+            label="Intelligence Modifier"
+            type="number"
+            class="q-mt-md"
+          />
+          <q-input
+            v-model.number="skillMod"
+            label="Skill Check Bonus"
+            type="number"
+            class="q-mt-md"
+            v-if="calcMode !== 'learnLanguageTool'"
+          />
+          <q-input
+            v-model.number="toolMod"
+            label="Tool Check Bonus (Skill Modifier + Proficiency)"
+            type="number"
+            class="q-mt-md"
+            v-if="calcMode === 'craftMagicItem'"
+          />
+        </div>
+        <div class="col-12 col-sm-6 q-pa-md">
+          <EditActivitiesItem
+            v-model:model-value="currentActivity"
+          ></EditActivitiesItem>
+        </div>
+      </q-card-section>
+      <q-card-section class="row">
+        <div class="col-12 col-sm-2">
+          <q-input
+            dense
+            filled
+            v-model.number="trialCountLimit"
+            label="Trials"
+            type="number"
+          />
+        </div>
+        <div class="col-12 col-sm-10">
+          <q-btn class="bg-primary fit text-white" @click="calculate">
+            Calculate
+          </q-btn>
+        </div>
+      </q-card-section>
     </div>
-  </div>
+  </CardSection>
 </template>
 
 <script setup>
@@ -105,6 +99,9 @@ import { ref, computed } from "vue";
 import TrialResultsCard from "./TrialResultsCard.vue";
 import EditActivitiesItem from "./EditActivitiesItem.vue";
 import { activities } from "app/data/data";
+import CardSection from "./CardSection.vue";
+
+const emit = defineEmits(["updateAverages"]);
 
 const trialCountLimit = ref(100000);
 
@@ -365,7 +362,6 @@ const runTrials = function (
       successChance: successfulRollCount / attemptedRollCount,
     },
   };
-  console.log(newReturnItem);
   return newReturnItem;
 };
 
@@ -390,5 +386,6 @@ function calculate() {
   } else if (calcMode.value === "learnSkill") {
     averages.value = initSkillTrials();
   }
+  emit("updateAverages", averages.value);
 }
 </script>
