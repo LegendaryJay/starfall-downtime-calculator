@@ -29,7 +29,7 @@
               :unitLabel="trialResults.time.unit + 's'"
             />
             <ResultItem
-              label="Successful Trials"
+              label="Completed Trials"
               :content="trialResults.time.trialSuccessRate"
               :format="formatToPercent"
             />
@@ -43,7 +43,12 @@
               :format="formatNumber"
               unitLabel="Gold"
             />
-
+            <ResultItem
+              label="Avg"
+              :content="trialResults.cost.average"
+              :format="formatNumber"
+              unitLabel="Gold"
+            />
             <ResultItem
               label="Min"
               :content="trialResults.cost.min"

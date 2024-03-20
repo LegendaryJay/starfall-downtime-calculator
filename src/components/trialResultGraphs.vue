@@ -30,15 +30,7 @@ const props = defineProps({
 const trialResults = toRef(props, "trialResults");
 
 function convertToGraphableData(data) {
-  const frequencyCounts = data.reduce((acc, value) => {
-    acc[value] = (acc[value] || 0) + 1;
-    return acc;
-  }, {});
-
-  return Object.entries(frequencyCounts).map(([number, frequencyCounts]) => [
-    Number(number),
-    frequencyCounts,
-  ]);
+  return Object.entries(data).map(([value, count]) => [Number(value), count]);
 }
 
 const timeSeries = ref([
@@ -102,7 +94,7 @@ const timeChartOptions = ref({
     },
     y: {
       formatter: (val) => {
-        const totalTrials = trialResults.value.time.timeData.length;
+        const totalTrials = trialResults.value.time.trialCount;
         const percentage = ((val / totalTrials) * 100).toFixed(2);
         return `${val} out of ${totalTrials} times (${percentage}%)`;
       },
@@ -236,7 +228,9 @@ watch(
 
       timeChartOptions.value.annotations.xaxis[0].x =
         trialResults.value.time.average;
-      timeChartOptions.value.annotations.xaxis[0].label.text = `Average: ${trialResults.value.time.average}`;
+      timeChartOptions.value.annotations.xaxis[0].label.text = `Average: ${trialResults.value.time.average.toFixed(
+        2
+      )}`;
       timeSeries.value[0].data = data;
     }
     if (costData) {
@@ -244,7 +238,9 @@ watch(
 
       costChartOptions.value.annotations.xaxis[0].x =
         trialResults.value.cost.average;
-      costChartOptions.value.annotations.xaxis[0].label.text = `Average: ${trialResults.value.cost.average}`;
+      costChartOptions.value.annotations.xaxis[0].label.text = `Average: ${trialResults.value.cost.average.toFixed(
+        2
+      )}`;
       costSeries.value[0].data = data;
     }
   },

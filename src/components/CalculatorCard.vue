@@ -85,8 +85,24 @@
           />
         </div>
         <div class="col-12 col-sm-10">
-          <q-btn class="bg-primary fit text-white" @click="calculate">
-            Calculate
+          <q-btn
+            :ripple="true"
+            color="primary"
+            class="bg-primary fit text-white q-pa-none"
+            @click="toggleTrials"
+          >
+            <q-linear-progress
+              dark
+              rounded
+              animation-speed="0"
+              :value="calculationProgress"
+              color="primary"
+              class="fit"
+            >
+              <div class="absolute-full flex flex-center text-h6 text-white">
+                {{ buttonText }}
+              </div>
+            </q-linear-progress>
           </q-btn>
         </div>
       </q-card-section>
@@ -96,7 +112,6 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import TrialResultsCard from "./TrialResultsCard.vue";
 import EditActivitiesItem from "./EditActivitiesItem.vue";
 import { activities } from "app/data/data";
 import CardSection from "./CardSection.vue";
@@ -135,6 +150,38 @@ const currentActivity = computed(() => {
   return undefined;
 });
 
+const isTrialRunning = ref();
+const shouldStopTrials = ref();
+const calculationProgress = ref();
+const buttonText = ref();
+
+const calculationControl = {
+  start() {
+    isTrialRunning.value = true;
+    shouldStopTrials.value = false;
+    calculationProgress.value = 0;
+    buttonText.value = "Force Complete";
+  },
+  stop() {
+    shouldStopTrials.value = true;
+  },
+  reset() {
+    isTrialRunning.value = false;
+    shouldStopTrials.value = false;
+    calculationProgress.value = 1;
+    buttonText.value = "Calculate";
+  },
+};
+calculationControl.reset();
+
+function toggleTrials() {
+  if (isTrialRunning.value) {
+    calculationControl.stop();
+  } else {
+    calculate();
+  }
+}
+
 function roll() {
   return Math.floor(Math.random() * 20) + 1;
 }
@@ -165,7 +212,7 @@ const initMagicItemTrials = function () {
     },
   };
 
-  return runTrials(
+  runTrials(
     magicItemTime,
     baseTime,
     skillBonus,
@@ -200,7 +247,7 @@ const initSkillTrials = function () {
     },
   };
 
-  return runTrials(
+  runTrials(
     learnSkillTime,
     baseTime,
     skillBonus,
@@ -277,17 +324,6 @@ function learnSkillTime(skillBonus, toolBonus, dc) {
   };
 }
 
-function calculateStatistics(data) {
-  const sum = data.reduce((a, b) => a + b, 0);
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  return {
-    avg: sum / data.length,
-    min,
-    max,
-  };
-}
-
 function runSingleTrial(
   timeRunthrough,
   baseTime,
@@ -295,7 +331,8 @@ function runSingleTrial(
   toolBonus,
   dc,
   cost,
-  costOffsetValue
+  costOffsetValue,
+  trialStats
 ) {
   let timeSuccessCount = 0;
   let timeForThisTrial = 0;
@@ -318,44 +355,67 @@ function runSingleTrial(
 
     timeForThisTrial++;
   }
-
-  return {
+  return accumulateTrialResults(trialStats, {
     timeForThisTrial,
     trialCost: cost + offsetCostForThisTrial,
     skillRollTotal,
     toolRollTotal,
     attemptedRollCount,
     successfulRollCount,
-  };
+    successfulTrialCount: timeForThisTrial < 999 ? 1 : 0,
+  });
 }
 
 function accumulateTrialResults(trialStats, trialResults) {
   trialStats.trialCount++;
-  trialStats.timeForThisTrial = trialResults.timeForThisTrial;
+
   trialStats.skillRollTotal += trialResults.skillRollTotal;
   trialStats.toolRollTotal += trialResults.toolRollTotal;
   trialStats.attemptedRollCount += trialResults.attemptedRollCount;
   trialStats.successfulRollCount += trialResults.successfulRollCount;
 
-  trialStats.successfulTrialCount +=
-    trialResults.timeForThisTrial < 999 ? 1 : 0;
+  trialStats.successfulTrialCount += trialResults.successfulTrialCount;
+  trialResults.timeForThisTrial < 999 ? 1 : 0;
 
-  trialStats.timeData.push(trialResults.timeForThisTrial);
-  trialStats.costData.push(trialResults.trialCost);
+  trialStats.timeTotal += trialResults.timeForThisTrial;
+  trialStats.costTotal += trialResults.trialCost;
+
+  trialStats.maxTime = Math.max(
+    trialStats.maxTime,
+    trialResults.timeForThisTrial
+  );
+  trialStats.minTime = Math.min(
+    trialStats.maxTime,
+    trialResults.timeForThisTrial
+  );
+  trialStats.maxCost = Math.max(trialStats.maxCost, trialResults.trialCost);
+  trialStats.minCost = Math.min(trialStats.maxCost, trialResults.trialCost);
+
+  trialStats.timeData[trialResults.timeForThisTrial] =
+    (trialStats.timeData[trialResults.timeForThisTrial] || 0) + 1;
+  trialStats.costData[trialResults.trialCost] =
+    (trialStats.costData[trialResults.trialCost] || 0) + 1;
 
   return trialStats;
 }
+
 function calculateFinalResults(trialStats, returnItem) {
+  console.log(trialStats.timeTotal / trialStats.trialCount);
   return {
     time: {
       ...returnItem.time,
-      ...calculateStatistics(trialStats.timeData),
+      min: trialStats.minTime,
+      max: trialStats.maxTime,
+      average: trialStats.timeTotal / trialStats.trialCount,
       trialSuccessRate: trialStats.successfulTrialCount / trialStats.trialCount,
       timeData: trialStats.timeData,
+      trialCount: trialStats.trialCount,
     },
     cost: {
       ...returnItem.cost,
-      ...calculateStatistics(trialStats.costData),
+      min: trialStats.minCost,
+      max: trialStats.maxCost,
+      average: trialStats.costTotal / trialStats.trialCount,
       costData: trialStats.costData,
     },
     rolls: {
@@ -371,7 +431,7 @@ function calculateFinalResults(trialStats, returnItem) {
   };
 }
 
-const runTrials = function (
+const runTrials = async function (
   timeRunthrough,
   baseTime,
   skillBonus,
@@ -379,35 +439,86 @@ const runTrials = function (
   dc,
   cost,
   costOffsetValue,
-  returnItem
+  returnItem,
+  trialStats = null
 ) {
-  let trialStats = {
-    trialCount: 0,
-    successfulTrialCount: 0,
-    skillRollTotal: 0,
-    toolRollTotal: 0,
-    attemptedRollCount: 0,
-    successfulRollCount: 0,
-    timeData: [],
-    costData: [],
-  };
+  if (trialStats === null) {
+    if (isTrialRunning.value) {
+      console.warn("Trial loop is already running.");
+      return;
+    }
+    trialStats = {
+      trialCount: 0,
+      successfulTrialCount: 0,
+      skillRollTotal: 0,
+      toolRollTotal: 0,
+      attemptedRollCount: 0,
+      successfulRollCount: 0,
+      timeTotal: 0,
+      costTotal: 0,
+      maxTime: 0,
+      minTime: Infinity,
+      maxCost: 0,
+      minCost: Infinity,
+      timeData: [],
+      costData: [],
+    };
+    calculationControl.start();
+  }
 
-  for (let trialIndex = 0; trialIndex < trialCountLimit.value; trialIndex++) {
-    const trialResult = runSingleTrial(
+  let trialsLeft = trialCountLimit.value - trialStats.trialCount;
+  const start = performance.now();
+  let end = performance.now();
+  while (
+    performance.now() - start < 20 &&
+    trialsLeft > 0 &&
+    !shouldStopTrials.value
+  ) {
+    trialStats = runSingleTrial(
       timeRunthrough,
       baseTime,
       skillBonus,
       toolBonus,
       dc,
       cost,
-      costOffsetValue
+      costOffsetValue,
+      trialStats
     );
-
-    trialStats = accumulateTrialResults(trialStats, trialResult);
+    trialsLeft--;
+    end = performance.now();
   }
-  let newReturnItem = calculateFinalResults(trialStats, returnItem);
-  console.log(newReturnItem.rolls);
-  return newReturnItem;
+
+  if (trialsLeft <= 0 || shouldStopTrials.value) {
+    if (shouldStopTrials.value) {
+      console.log("Trial loop was stopped.");
+    } else {
+      console.log("Trial loop completed.");
+    }
+
+    calculationControl.reset();
+
+    averages.value = calculateFinalResults(trialStats, returnItem);
+    emit("updateAverages", averages.value);
+
+    return;
+  }
+  calculationProgress.value = 1 - trialsLeft / trialCountLimit.value;
+
+  setTimeout(
+    () =>
+      runTrials(
+        timeRunthrough,
+        baseTime,
+        skillBonus,
+        toolBonus,
+        dc,
+        cost,
+        costOffsetValue,
+        returnItem,
+        trialStats
+      ),
+    10
+  );
 };
 
 function langToolTrial() {
@@ -425,12 +536,12 @@ function langToolTrial() {
 
 function calculate() {
   if (calcMode.value === "craftMagicItem") {
-    averages.value = initMagicItemTrials();
+    initMagicItemTrials();
   } else if (calcMode.value === "learnLanguageTool") {
     averages.value = langToolTrial();
+    emit("updateAverages", averages.value);
   } else if (calcMode.value === "learnSkill") {
-    averages.value = initSkillTrials();
+    initSkillTrials();
   }
-  emit("updateAverages", averages.value);
 }
 </script>
