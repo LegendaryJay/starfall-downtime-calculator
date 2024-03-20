@@ -29,6 +29,18 @@ const props = defineProps({
 
 const trialResults = toRef(props, "trialResults");
 
+function convertToGraphableData(data) {
+  const frequencyCounts = data.reduce((acc, value) => {
+    acc[value] = (acc[value] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.entries(frequencyCounts).map(([number, frequencyCounts]) => [
+    Number(number),
+    frequencyCounts,
+  ]);
+}
+
 const timeSeries = ref([
   {
     name: "Frequency",
@@ -43,7 +55,6 @@ const timeChartOptions = ref({
   annotations: {
     xaxis: [
       {
-        x: trialResults.value.time.average,
         borderColor: "#00E396",
         label: {
           borderColor: "#00E396",
@@ -51,7 +62,6 @@ const timeChartOptions = ref({
             color: "#fff",
             background: "#00E396",
           },
-          text: `Average: ${trialResults.value.time.average}`,
         },
       },
     ],
@@ -112,6 +122,22 @@ const costSeries = ref([
   },
 ]);
 const costChartOptions = ref({
+  annotations: {
+    xaxis: [
+      {
+        x: trialResults.value.cost.average,
+        borderColor: "#00E396",
+        label: {
+          borderColor: "#00E396",
+          style: {
+            color: "#fff",
+            background: "#00E396",
+          },
+          text: `Average: ${trialResults.value.cost.average}`,
+        },
+      },
+    ],
+  },
   chart: {
     height: 350,
     type: "area",
@@ -207,67 +233,19 @@ watch(
     let timeData = newData?.time?.timeData;
     let costData = newData?.cost?.costData;
     if (timeData) {
-      const counts = timeData.reduce((acc, value) => {
-        acc[value] = (acc[value] || 0) + 1;
-        return acc;
-      }, {});
+      const data = convertToGraphableData(timeData);
 
-      const data = Object.entries(counts).map(([number, count]) => [
-        Number(number),
-        count,
-      ]);
-
-      timeChartOptions.value = {
-        ...timeChartOptions.value,
-        annotations: {
-          xaxis: [
-            {
-              x: trialResults.value.time.average,
-              borderColor: "#00E396",
-              label: {
-                borderColor: "#00E396",
-                style: {
-                  color: "#fff",
-                  background: "#00E396",
-                },
-                text: `Average: ${trialResults.value.time.average}`,
-              },
-            },
-          ],
-        },
-      };
+      timeChartOptions.value.annotations.xaxis[0].x =
+        trialResults.value.time.average;
+      timeChartOptions.value.annotations.xaxis[0].label.text = `Average: ${trialResults.value.time.average}`;
       timeSeries.value[0].data = data;
     }
     if (costData) {
-      const counts = costData.reduce((acc, value) => {
-        acc[value] = (acc[value] || 0) + 1;
-        return acc;
-      }, {});
+      const data = convertToGraphableData(costData);
 
-      const data = Object.entries(counts).map(([number, count]) => [
-        Number(number),
-        count,
-      ]);
-
-      costChartOptions.value = {
-        ...costChartOptions.value,
-        annotations: {
-          xaxis: [
-            {
-              x: trialResults.value.cost.average,
-              borderColor: "#00E396",
-              label: {
-                borderColor: "#00E396",
-                style: {
-                  color: "#fff",
-                  background: "#00E396",
-                },
-                text: `Average: ${trialResults.value.cost.average}`,
-              },
-            },
-          ],
-        },
-      };
+      costChartOptions.value.annotations.xaxis[0].x =
+        trialResults.value.cost.average;
+      costChartOptions.value.annotations.xaxis[0].label.text = `Average: ${trialResults.value.cost.average}`;
       costSeries.value[0].data = data;
     }
   },
