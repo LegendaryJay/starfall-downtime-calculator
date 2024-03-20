@@ -1,5 +1,5 @@
 <template>
-  <div class="q-pa-md column">
+  <div class="q-pa-md">
     <VueApexCharts
       type="area"
       height="350"
@@ -17,7 +17,7 @@
 </template>
 
 <script setup>
-import { ref, watch, toRef } from "vue";
+import { ref, watch, toRef, onMounted, onUnmounted } from "vue";
 import VueApexCharts from "vue3-apexcharts";
 
 const props = defineProps({
@@ -49,7 +49,7 @@ const timeSeries = ref([
 ]);
 const timeChartOptions = ref({
   chart: {
-    height: 350,
+    width: "100%",
     type: "area",
   },
   annotations: {
@@ -125,7 +125,6 @@ const costChartOptions = ref({
   annotations: {
     xaxis: [
       {
-        x: trialResults.value.cost.average,
         borderColor: "#00E396",
         label: {
           borderColor: "#00E396",
@@ -133,13 +132,13 @@ const costChartOptions = ref({
             color: "#fff",
             background: "#00E396",
           },
-          text: `Average: ${trialResults.value.cost.average}`,
         },
       },
     ],
   },
   chart: {
     height: 350,
+    width: "100%",
     type: "area",
 
     background: "#f7f2e0",
