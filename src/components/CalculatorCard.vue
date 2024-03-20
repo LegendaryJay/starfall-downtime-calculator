@@ -277,6 +277,100 @@ function learnSkillTime(skillBonus, toolBonus, dc) {
   };
 }
 
+function calculateStatistics(data) {
+  const sum = data.reduce((a, b) => a + b, 0);
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  return {
+    avg: sum / data.length,
+    min,
+    max,
+  };
+}
+
+function runSingleTrial(
+  timeRunthrough,
+  baseTime,
+  skillBonus,
+  toolBonus,
+  dc,
+  cost,
+  costOffsetValue
+) {
+  let timeSuccessCount = 0;
+  let timeForThisTrial = 0;
+  let offsetCostForThisTrial = 0;
+
+  let skillRollTotal = 0;
+  let toolRollTotal = 0;
+  let attemptedRollCount = 0;
+  let successfulRollCount = 0;
+
+  while (timeSuccessCount < baseTime && timeForThisTrial < 999) {
+    let thisTimeData = timeRunthrough(skillBonus, toolBonus, dc);
+
+    timeSuccessCount += thisTimeData.timeSuccessCount;
+    skillRollTotal += thisTimeData.skillRollTotal;
+    toolRollTotal += thisTimeData.toolRollTotal;
+    attemptedRollCount += thisTimeData.rollCount;
+    successfulRollCount += thisTimeData.rollSuccessCount;
+    offsetCostForThisTrial += thisTimeData.costOffsetCount * costOffsetValue;
+
+    timeForThisTrial++;
+  }
+
+  return {
+    timeForThisTrial,
+    trialCost: cost + offsetCostForThisTrial,
+    skillRollTotal,
+    toolRollTotal,
+    attemptedRollCount,
+    successfulRollCount,
+  };
+}
+
+function accumulateTrialResults(trialStats, trialResults) {
+  trialStats.trialCount++;
+  trialStats.timeForThisTrial = trialResults.timeForThisTrial;
+  trialStats.skillRollTotal += trialResults.skillRollTotal;
+  trialStats.toolRollTotal += trialResults.toolRollTotal;
+  trialStats.attemptedRollCount += trialResults.attemptedRollCount;
+  trialStats.successfulRollCount += trialResults.successfulRollCount;
+
+  trialStats.successfulTrialCount +=
+    trialResults.timeForThisTrial < 999 ? 1 : 0;
+
+  trialStats.timeData.push(trialResults.timeForThisTrial);
+  trialStats.costData.push(trialResults.trialCost);
+
+  return trialStats;
+}
+function calculateFinalResults(trialStats, returnItem) {
+  return {
+    time: {
+      ...returnItem.time,
+      ...calculateStatistics(trialStats.timeData),
+      trialSuccessRate: trialStats.successfulTrialCount / trialStats.trialCount,
+      timeData: trialStats.timeData,
+    },
+    cost: {
+      ...returnItem.cost,
+      ...calculateStatistics(trialStats.costData),
+      costData: trialStats.costData,
+    },
+    rolls: {
+      ...returnItem.rolls,
+      skill: trialStats.skillRollTotal / trialStats.attemptedRollCount,
+      tool:
+        returnItem.rolls.toolBonus === null
+          ? null
+          : trialStats.toolRollTotal / trialStats.attemptedRollCount,
+      successChance:
+        trialStats.successfulRollCount / trialStats.attemptedRollCount,
+    },
+  };
+}
+
 const runTrials = function (
   timeRunthrough,
   baseTime,
@@ -287,81 +381,32 @@ const runTrials = function (
   costOffsetValue,
   returnItem
 ) {
-  let trialCount = 0;
-  let successfulTrialCount = 0;
-
-  let successfulRollCount = 0;
-  let attemptedRollCount = 0;
-  let skillRollTotal = 0;
-  let toolRollTotal = 0;
-
-  let totalTime = 0;
-  let minTime = Infinity;
-  let maxTime = 0;
-
-  let totalCost = 0;
-  let minCost = Infinity;
-  let maxCost = 0;
-
-  let timeData = [];
-  let costData = [];
+  let trialStats = {
+    trialCount: 0,
+    successfulTrialCount: 0,
+    skillRollTotal: 0,
+    toolRollTotal: 0,
+    attemptedRollCount: 0,
+    successfulRollCount: 0,
+    timeData: [],
+    costData: [],
+  };
 
   for (let trialIndex = 0; trialIndex < trialCountLimit.value; trialIndex++) {
-    let timeSuccessCount = 0;
-    let timeForThisTrial = 0;
-    let offsetCostForThisTrial = 0;
+    const trialResult = runSingleTrial(
+      timeRunthrough,
+      baseTime,
+      skillBonus,
+      toolBonus,
+      dc,
+      cost,
+      costOffsetValue
+    );
 
-    while (timeSuccessCount < baseTime && timeForThisTrial < 999) {
-      let thisTimeData = timeRunthrough(skillBonus, toolBonus, dc);
-
-      timeSuccessCount += thisTimeData.timeSuccessCount;
-      skillRollTotal += thisTimeData.skillRollTotal;
-      toolRollTotal += thisTimeData.toolRollTotal;
-      attemptedRollCount += thisTimeData.rollCount;
-      successfulRollCount += thisTimeData.rollSuccessCount;
-      offsetCostForThisTrial += thisTimeData.costOffsetCount * costOffsetValue;
-
-      timeForThisTrial++;
-    }
-    successfulTrialCount += timeForThisTrial < 999 ? 1 : 0;
-
-    let trialCost = cost + offsetCostForThisTrial;
-    minCost = Math.min(minCost, trialCost);
-    maxCost = Math.max(maxCost, trialCost);
-    totalCost += trialCost;
-
-    minTime = Math.min(minTime, timeForThisTrial);
-    maxTime = Math.max(maxTime, timeForThisTrial);
-    totalTime += timeForThisTrial;
-
-    timeData.push(timeForThisTrial);
-    costData.push(trialCost);
-
-    trialCount++;
+    trialStats = accumulateTrialResults(trialStats, trialResult);
   }
-  let newReturnItem = {
-    time: {
-      ...returnItem.time,
-      average: totalTime / trialCount,
-      min: minTime,
-      max: maxTime,
-      trialSuccessRate: successfulTrialCount / trialCount,
-      timeData,
-    },
-    cost: {
-      ...returnItem.cost,
-      average: totalCost / trialCount,
-      min: minCost,
-      max: maxCost,
-      costData,
-    },
-    rolls: {
-      ...returnItem.rolls,
-      skill: skillRollTotal / attemptedRollCount,
-      tool: toolBonus === null ? null : toolRollTotal / attemptedRollCount,
-      successChance: successfulRollCount / attemptedRollCount,
-    },
-  };
+  let newReturnItem = calculateFinalResults(trialStats, returnItem);
+  console.log(newReturnItem.rolls);
   return newReturnItem;
 };
 
